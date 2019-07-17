@@ -1,0 +1,78 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test reports and coverage
+lib-cov
+coverage
+.nyc_output
+test-results
+test-reports
+junit.xml
+
+# Dependency directories
+.npm
+.node_repl_history
+.yarn-integrity
+node_modules
+.nyc_output*
+
+# Build output
+.next
+cloudformation/dist
+cfDist
+dist
+.grunt
+bower_components
+.lock-wscript
+build/Release
+jspm_packages
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw[a-z]
+.eslintcache
+
+# Node Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Random files
+*.tgz
+.env
+.env.*.local
+.DS_Store
+*.iml
+*.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+.apdisk
+.nvmrc
+
+*~
+
+.gradle/
+
+.classpath
+.project

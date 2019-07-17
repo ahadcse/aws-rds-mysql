@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: aws-rds-mysql - S3 Bucket
+
+Parameters:
+  BucketName:
+    Type: String
+
+Resources:
+  CiPricesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      VersioningConfiguration:
+        Status: Enabled
+
+Outputs:
+  BucketName:
+    Value: !Ref AwsRdsMySQLBucket
+    Description: Storage for AWS RDS MySQL service

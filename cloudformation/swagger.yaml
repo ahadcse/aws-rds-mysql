@@ -1,0 +1,91 @@
+swagger: '2.0'
+info:
+  description: The API of AWS RDS MySQL
+  version: "0.1"
+  title: AWS RDS MySQL
+  contact:
+    email: ahadcse@gmail.com
+
+paths:
+
+  /lists/{listId}:
+    get:
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: listId
+          required: true
+          type: integer
+          minimum: 1
+          description: The id of the list
+      responses:
+        200:
+          description: List response
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/List"
+        400:
+          description: Bad Request
+          schema:
+            $ref: "#/definitions/ErrorMessage"
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/ErrorMessage"
+      security:
+        - sigv4: []
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${Service}-getList/invocations
+        credentials:
+          Fn::Sub: ${ApiRole.Arn}
+        httpMethod: POST
+        responses:
+          4\d{2}:
+            statusCode: 400
+            responseTemplates:
+              application/json: "{ \"message\": $input.json(\"$.message\") }"
+          default:
+            statusCode: 200
+            responseTemplates:
+              application/json: "{ \"message\": \"Success\" }"
+
+securityDefinitions:
+
+  sigv4:
+    type: "apiKey"
+    name: "Authorization"
+    in: "header"
+    x-amazon-apigateway-authtype: "awsSigv4"
+
+definitions:
+
+  List:
+    type: object
+    description: List object
+    required:
+      - listId
+      - description
+    properties:
+      listId:
+        type: string
+        description: List Id
+      description:
+        type: string
+        description: List description
+
+  ErrorMessage:
+    type: object
+    properties:
+      statusCode:
+        type: number
+        description: Error Code
+      message:
+        type: string
+        description: Reason for Error
+
+schemes:
+  - https

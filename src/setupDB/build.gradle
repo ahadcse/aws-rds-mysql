@@ -1,0 +1,27 @@
+apply plugin: 'java'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'org.slf4j:slf4j-api:1.7.21'
+
+    compile 'com.amazonaws:aws-lambda-java-core:1.2.0'
+    compile 'com.amazonaws:aws-java-sdk-ssm:1.11.519'
+
+    compile 'org.liquibase:liquibase-core:3.6.3'
+    compile 'mysql:mysql-connector-java:8.0.15'
+
+    testCompile 'junit:junit:4.12'
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "com.rds.mysql.MigrationTool"
+    }
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}

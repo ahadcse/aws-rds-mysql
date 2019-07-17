@@ -1,0 +1,11 @@
+{
+  "httpMethod": "GET",
+  "requestContext": {
+    "resourcePath": "/lists/{listId}"
+  },
+  "pathParameters": {
+    "listId": "id1"
+  },
+  "queryStringParameters": {
+  }
+}

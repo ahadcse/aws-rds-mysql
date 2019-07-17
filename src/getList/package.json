@@ -1,0 +1,13 @@
+{
+  "name": "getList",
+  "version": "1.0.0",
+  "dependencies": {
+    "mysql": "^2.16.0"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.401.0",
+    "@types/node": "^11.9.4",
+    "@types/mysql": "^2.15.5",
+    "typescript": "^3.3.1"
+  }
+}

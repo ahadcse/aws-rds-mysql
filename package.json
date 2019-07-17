@@ -1,0 +1,31 @@
+{
+  "name": "aws-rds-mysql",
+  "version": "1.0.0",
+  "dependencies": {
+    "mysql": "latest"
+  },
+  "scripts": {
+    "postinstall": "",
+    "test": "make test",
+    "test-unit": "make test-unit",
+    "test-integration": "make test-integration",
+    "coverage": "make test-coverage",
+    "ci": "make ci",
+    "lint": "make lint"
+  },
+  "devDependencies": {
+    "@reportportal/reportportal-agent-jest": "^1.0.7",
+    "@types/jest": "^23.0.0",
+    "@types/mysql": "^2.15.5",
+    "@types/nock": "^9.3.1",
+    "@types/node": "^10.12.21",
+    "aws-sdk": "^2.399.0",
+    "jest": "^23.1.0",
+    "moment": "^2.24.0",
+    "mysql": "^2.16.0",
+    "ts-jest": "^23.10.5",
+    "tslint": "^5.12.1",
+    "typescript": "^3.5.1",
+    "util": "^0.11.1"
+  }
+}

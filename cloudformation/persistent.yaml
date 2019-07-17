@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS RDS MySQL Persistent Stack
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  Environment:
+    Type: String
+  Service:
+    Type: String
+  RootUser:
+    Type: String
+  RootPassword:
+    Type: String
+  DBName:
+    Type: String
+
+Mappings:
+  dev:
+    vpc:
+      vpcId: vpc-id-dev
+      subnetIds: [subnet-id-dev-1, subnet-id-dev-2, subnet-id-dev-3]
+  test:
+    vpc:
+      vpcId: vpc-id-test
+      subnetIds: [subnet-id-test-1, subnet-id-test-2, subnet-id-test-3]
+  prod:
+    vpc:
+      vpcId: vpc-id-prod
+      subnetIds: [subnet-id-prod-1, subnet-id-prod-2, subnet-id-prod-3]
+
+Resources:
+
+  ServiceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref Service
+      VersioningConfiguration:
+        Status: Enabled
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for database
+      SubnetIds:
+        Fn::FindInMap: [ !Ref Environment, vpc,  subnetIds ]
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the ECS hosts and RDS that run on them
+      VpcId:
+        Fn::FindInMap: [ !Ref Environment, vpc, vpcId ]
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+
+  RDSCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Port: 3306
+      DBClusterIdentifier: !Sub ${Service}-database-cluster
+      DatabaseName: !Sub ${DBName}
+      MasterUsername: !Ref RootUser
+      MasterUserPassword: !Ref RootPassword
+      Engine: aurora-mysql
+      DBClusterParameterGroupName: default.aurora-mysql5.7
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !GetAtt RDSSecurityGroup.GroupId
+
+  RDSDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: aurora-mysql
+      DBClusterIdentifier: !Ref RDSCluster
+      PubliclyAccessible: false
+      DBInstanceClass: db.t2.small
+      DBSubnetGroupName: !Ref DBSubnetGroup
+
+Outputs:
+
+  DBHostUrl:
+    Description: DB Host URL
+    Value: !GetAtt RDSDBInstance.Endpoint.Address
+    Export:
+      Name: DBHostUrl
+
+  DBSecurityGroupId:
+    Description: DB Security Group Id
+    Value: !GetAtt RDSSecurityGroup.GroupId
+    Export:
+      Name: DBSecurityGroupId

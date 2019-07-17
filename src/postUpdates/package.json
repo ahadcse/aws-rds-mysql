@@ -1,0 +1,11 @@
+{
+  "name": "postUpdates",
+  "version": "1.0.0",
+  "dependencies": {
+    "mysql": "^2.16.0"
+  },
+  "devDependencies": {
+    "@types/mysql": "^2.15.5",
+    "aws-sdk": "^2.424.0"
+  }
+}

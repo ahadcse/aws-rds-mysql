@@ -1,0 +1,203 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Serverless Stack
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  Environment:
+    Type: String
+  Service:
+    Type: String
+  Swagger:
+    Type: String
+  Region:
+    Type: String
+  BucketName:
+    Type: String
+  DBUsername:
+    Type: String
+  DBName:
+    Type: String
+
+Mappings:
+  dev:
+    s3:
+      version: s3-version
+    api:
+      domainname: dev-domain.com
+    vpc:
+      vpcId: vpc-dev
+      subnetIds: [subnet-id-dev-1, subnet-id-dev-2, subnet-id-dev-3]
+  test:
+    s3:
+      version: s3-version
+    api:
+      internal: test-domain.com
+    vpc:
+      vpcId: vpc-test
+      subnetIds: [subnet-id-test-1, subnet-id-test-2, subnet-id-test-3]
+  prod:
+    s3:
+      version: s3-version
+    api:
+      internal: prod-domain.com
+    vpc:
+      vpcId: vpc-prod
+      subnetIds: [subnet-id-prod-1, subnet-id-prod-2, subnet-id-prod-3]
+
+Globals:
+  Function:
+    Runtime: nodejs8.10
+    Handler: index.handler
+    Timeout: 180
+    MemorySize: 640
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        DB_HOST:
+          Fn::ImportValue: DBHostUrl
+        DB_NAME: listdb
+    VpcConfig:
+      SecurityGroupIds:
+        - Fn::ImportValue: DBSecurityGroupId
+      SubnetIds:
+        Fn::FindInMap: [ !Ref Environment, vpc, subnetIds ]
+
+Resources:
+
+  # This is intended to be run as a custom resource to set up the DB schemas
+  SetupDB:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: java8
+      Handler: com.rds.mysql.MigrationTool::handleRequest
+      FunctionName: !Sub ${Service}-setupDB
+      Description: Run schema migrations for database
+      CodeUri:
+        Bucket: !Sub ${BucketName}
+        Key: aws-rds-mysql/setupDB.jar
+        Version:
+          Fn::FindInMap: [ !Ref Environment, s3, version ]
+      Policies:
+        - AWSLambdaVPCAccessExecutionRole
+        - AmazonSSMFullAccess
+        - AmazonRDSFullAccess
+      Environment:
+        Variables:
+          DB_USERNAME: !Ref DBUsername
+          DB_NAME: !Ref DBName
+          DB_HOST:
+            Fn::ImportValue: DBHostUrl
+
+  GetList:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Service}-getList
+      CodeUri: ../dist/src/getList
+      Role: !GetAtt LambdaRole.Arn
+      Environment:
+        Variables:
+          DB_USER: root
+          DOMAIN:
+            Fn::FindInMap: [ !Ref Environment, api, domainname ]
+
+  PostUpdates:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Service}-postUpdates
+      Description: Updates the RDS database with new data
+      CodeUri: ../dist/src/postUpdates
+      Role: !GetAtt PostUpdatesRole.Arn
+      Events:
+        SQSTrigger:
+          Type: SQS
+          Enabled: true
+          Properties:
+            Queue: !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:${Service}-consumer
+            BatchSize: 1
+      Environment:
+        Variables:
+          DB_HOST:
+            Fn::ImportValue: DbHostUrl
+          SSMKEY: '/config/updater_password'
+          SQS_URL: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/${Service}-consumer
+          # The lambda will be triggered when an item arrives into the queue
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: ssm
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: arn:aws:ssm:*:*:*
+        - PolicyName: sqs
+          PolicyDocument:
+            Statement:
+              Effect: Allow
+              Action:
+                - "sqs:*"
+              Resource: arn:aws:sqs:*:*:*
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+
+  ApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+      Policies:
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !GetAtt GetList.Arn
+
+  ListApi:
+    Type: "AWS::Serverless::Api"
+    Properties:
+      StageName: !Ref Environment
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: !Ref Swagger
+
+  BasePath:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      BasePath: lists
+      DomainName:
+        Fn::FindInMap: [!Ref Environment, api, internal]
+      RestApiId: !Ref ListApi
+      Stage: !Ref ListApi.Stage
