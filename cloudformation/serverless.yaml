@@ -106,7 +106,7 @@ Resources:
       FunctionName: !Sub ${Service}-postUpdates
       Description: Updates the RDS database with new data
       CodeUri: ../dist/src/postUpdates
-      Role: !GetAtt PostUpdatesRole.Arn
+      Role: !GetAtt LambdaRole.Arn
       Events:
         SQSTrigger:
           Type: SQS
