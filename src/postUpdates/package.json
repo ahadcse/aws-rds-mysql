@@ -6,6 +6,6 @@
   },
   "devDependencies": {
     "@types/mysql": "^2.15.5",
-    "aws-sdk": "^2.424.0"
+    "aws-sdk": "^2.814.0"
   }
 }
